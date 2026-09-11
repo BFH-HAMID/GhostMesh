@@ -6,8 +6,8 @@
  * useSelfDestruct). Outbound messages carry their TTL inside the encrypted
  * payload so the receiver burns them on the same schedule.
  */
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { useGhostStore, selectConversation } from '@/store/useGhostStore'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useGhostStore, selectConversation, useShallow } from '@/store/useGhostStore'
 import { getMesh, burnMessage } from '@/services/MeshService'
 import { formatCountdown, ttlProgress, useSelfDestruct } from '@/hooks/useSelfDestruct'
 import type { ChatMessage } from '@/types'
@@ -93,7 +93,9 @@ export default function SelfDestructChat() {
   const now = useSelfDestruct(250)
   const peerId = useGhostStore((s) => s.activeConversation)
   const peer = useGhostStore((s) => (peerId ? s.nodes[peerId] : undefined))
-  const messages = useGhostStore(useMemo(() => selectConversation(peerId), [peerId]))
+  // useShallow is REQUIRED: selectConversation returns a fresh array each call,
+  // and useSyncExternalStore loops forever on an unstable snapshot.
+  const messages = useGhostStore(useShallow(selectConversation(peerId)))
   const defaultTtl = useGhostStore((s) => s.defaultTtlMs)
   const setDefaultTtl = useGhostStore((s) => s.setDefaultTtl)
   const back = useGhostStore((s) => s.setActiveConversation)

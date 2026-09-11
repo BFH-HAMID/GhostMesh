@@ -4,12 +4,12 @@
  */
 import { useEffect, useRef } from 'react'
 import Sparkline from './Sparkline'
-import { useGhostStore, selectPeers } from '@/store/useGhostStore'
+import { useGhostStore, selectPeers, useShallow } from '@/store/useGhostStore'
 
 export default function DiagnosticsDashboard() {
   const samples = useGhostStore((s) => s.samples)
   const logs = useGhostStore((s) => s.logs)
-  const peers = useGhostStore(selectPeers)
+  const peers = useGhostStore(useShallow(selectPeers))
   const transfers = useGhostStore((s) => s.transfers)
   const logRef = useRef<HTMLDivElement>(null)
 

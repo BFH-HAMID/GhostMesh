@@ -17,6 +17,8 @@ export class E2EEClient {
   private worker: Worker
   private seq = 0
   private pending = new Map<number, Pending>()
+  /** Set once the worker script fails to load/start; all calls reject from then on. */
+  private failed: Error | null = null
 
   constructor() {
     this.worker = new Worker(new URL('./E2EEWorker.ts', import.meta.url), { type: 'module', name: 'ghostmesh-e2ee' })
@@ -27,13 +29,25 @@ export class E2EEClient {
       if ('error' in ev.data) p.reject(new Error(ev.data.error))
       else p.resolve(ev.data)
     }
-    this.worker.onerror = (e) => console.error('[E2EEWorker] fatal', e)
+    this.worker.onerror = (e) => {
+      // Without this, an unloaded worker script (404 / CSP / MIME error on the
+      // host) would leave every pending call hanging forever — the UI would
+      // freeze on "BOOTING MESH…" with no visible cause.
+      const msg = e.message
+        ? `E2EE worker error: ${e.message}`
+        : 'E2EE worker failed to load (asset 404 or blocked by host CSP/MIME)'
+      this.failed = new Error(msg)
+      console.error('[E2EEWorker] fatal', e)
+      this.pending.forEach((p) => p.reject(this.failed as Error))
+      this.pending.clear()
+    }
   }
 
   private call<Op extends WorkerRequest['op']>(
     req: Extract<WorkerRequest, { op: Op }>,
     transfer: Transferable[] = [],
   ): Promise<ResponseFor<Op>> {
+    if (this.failed) return Promise.reject(this.failed)
     const reqId = ++this.seq
     return new Promise((resolve, reject) => {
       this.pending.set(reqId, { resolve: (v) => resolve(v as ResponseFor<Op>), reject })
