@@ -3,7 +3,7 @@
  * Layout: sidebar (node list) + main viewport on desktop; tabbed on mobile.
  */
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { useGhostStore, selectPeers, selectLatestSample } from '@/store/useGhostStore'
+import { useGhostStore, selectPeers, selectLatestSample, useShallow } from '@/store/useGhostStore'
 import { useTheme } from '@/hooks/useTheme'
 import { shutdownMesh } from '@/services/MeshService'
 import NodeList from './NodeList'
@@ -35,7 +35,7 @@ export default function HudShell() {
   const setView = useGhostStore((s) => s.setView)
   const phase = useGhostStore((s) => s.phase)
   const identity = useGhostStore((s) => s.identity)
-  const peers = useGhostStore(selectPeers)
+  const peers = useGhostStore(useShallow(selectPeers))
   const sample = useGhostStore(selectLatestSample)
   const threats = useGhostStore((s) => s.threats)
   const setPhase = useGhostStore((s) => s.setPhase)

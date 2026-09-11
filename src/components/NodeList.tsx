@@ -1,8 +1,10 @@
 /** Sidebar list of peers with quick chat access. */
-import { useGhostStore, selectPeers } from '@/store/useGhostStore'
+import { useGhostStore, selectPeers, useShallow } from '@/store/useGhostStore'
 
 export default function NodeList() {
-  const peers = useGhostStore(selectPeers)
+  // useShallow is REQUIRED here: selectPeers returns a fresh array each call,
+  // and useSyncExternalStore loops forever on an unstable snapshot.
+  const peers = useGhostStore(useShallow(selectPeers))
   const active = useGhostStore((s) => s.activeConversation)
   const setActive = useGhostStore((s) => s.setActiveConversation)
   const messages = useGhostStore((s) => s.messages)

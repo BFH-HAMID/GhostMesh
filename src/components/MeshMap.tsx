@@ -15,7 +15,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Html, Line, OrbitControls, Stars } from '@react-three/drei'
 import * as THREE from 'three'
-import { useGhostStore, selectPeers } from '@/store/useGhostStore'
+import { useGhostStore, selectPeers, useShallow } from '@/store/useGhostStore'
 import type { MeshNode } from '@/types'
 
 const R = 2
@@ -169,7 +169,7 @@ function RouteArc({ a, b, active }: { a: THREE.Vector3; b: THREE.Vector3; active
 
 function Scene({ lowPower }: { lowPower: boolean }) {
   const nodes = useGhostStore((s) => s.nodes)
-  const peers = useGhostStore(selectPeers)
+  const peers = useGhostStore(useShallow(selectPeers))
   const fresh = useGhostStore((s) => s.freshNodes)
   const edges = useGhostStore((s) => s.edges)
   const setActive = useGhostStore((s) => s.setActiveConversation)
@@ -224,7 +224,7 @@ function Scene({ lowPower }: { lowPower: boolean }) {
 export default function MeshMap() {
   const theme = useGhostStore((s) => s.theme)
   const lowPower = theme === 'amoled'
-  const peers = useGhostStore(selectPeers)
+  const peers = useGhostStore(useShallow(selectPeers))
   const transports = useGhostStore((s) => s.transports)
   const trusted = peers.filter((p) => p.status === 'trusted').length
 

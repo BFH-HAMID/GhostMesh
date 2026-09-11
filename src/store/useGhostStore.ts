@@ -122,6 +122,18 @@ export const useGhostStore = create<GhostState>()((set) => ({
 }))
 
 /* Selectors */
+/**
+ * ⚠ selectPeers / selectConversation return a NEW array on every call.
+ * `useGhostStore` uses React's `useSyncExternalStore`, whose getSnapshot must
+ * be referentially stable: feeding it a fresh array makes React believe the
+ * snapshot changed on every read → "Maximum update depth exceeded" → the
+ * whole tree unmounts (silent black screen in production).
+ *
+ * ALWAYS wrap them when subscribing:
+ *   const peers = useGhostStore(useShallow(selectPeers))
+ * `selectLatestSample` is safe as-is (returns a stable object reference).
+ */
+export { useShallow } from 'zustand/react/shallow'
 export const selectPeers = (s: GhostState) => Object.values(s.nodes).filter((n) => !n.isSelf)
 export const selectConversation = (id: NodeId | null) => (s: GhostState) =>
   id ? s.messages.filter((m) => m.conversationId === id) : []

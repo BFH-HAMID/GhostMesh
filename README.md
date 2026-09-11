@@ -71,6 +71,22 @@ npm run cap:sync   # build + sync
 npm run cap:open   # open Android Studio
 ```
 
+## Web deployment (Vercel)
+
+The app is a static Vite SPA — deploy the `dist/` output, not the source.
+
+1. Import the repo in Vercel and keep the auto-detected **Vite** preset
+   (build `npm run build`, output `dist`).
+2. Deploy. Serve over **HTTPS** — `crypto.subtle` (WebCrypto) and the E2EE
+   worker only work in a secure context.
+
+If after "Generate keys & enter" the screen ever goes blank, open DevTools:
+an uncaught render error now lands on the `SIGNAL LOST` boundary panel
+(instead of a silent black page) and prints the error to the console. A
+frozen "BOOTING MESH…" means the worker asset
+(`assets/E2EEWorker-*.js`) didn't load — check the host is serving `dist/`
+in full (404 / CSP / MIME) — and reload.
+
 ## Security notes
 
 * Private keys never leave the E2EE worker; `PANIC` wipes keys, sessions and the vault.
