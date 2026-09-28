@@ -1,102 +1,125 @@
 # GhostMesh
 
-**Decentralized stealth mesh messenger** — end-to-end encrypted, self-destructing
-messaging over an opportunistic peer-to-peer mesh (Internet ➜ Wi-Fi Direct ➜
-Bluetooth LE), wrapped in a cyberpunk holographic HUD with a live 3D globe of
-the network. Runs in the browser (React + Vite) and on Android (Capacitor).
+<p align="center">
+  <img src="docs/images/ghostmesh-hero.svg" alt="GhostMesh — private messages, no single route" width="100%" />
+</p>
 
-```
- ┌────────────────────────────────────────────────────────────────┐
- │  React 19 · TypeScript (strict) · Tailwind v4 · R3F/Three.js   │
- │  Zustand · Web Crypto + tweetnacl · Web Workers · IndexedDB    │
- │  Capacitor 8 (BLE · Wi-Fi Direct · Biometrics · Notifications) │
- └────────────────────────────────────────────────────────────────┘
-```
+<p align="center">
+  <strong>Decentralized stealth messaging for web and Android.</strong><br />
+  End-to-end encrypted conversations over an opportunistic peer-to-peer mesh.
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img alt="GPL-3.0 license" src="https://img.shields.io/badge/license-GPL--3.0-8b5cf6?style=flat-square" /></a>
+  <img alt="React 19" src="https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react&logoColor=111827" />
+  <img alt="TypeScript 5.9" src="https://img.shields.io/badge/TypeScript-5.9-3178c6?style=flat-square&logo=typescript&logoColor=white" />
+  <img alt="Vite 8" src="https://img.shields.io/badge/Vite-8-646cff?style=flat-square&logo=vite&logoColor=white" />
+  <img alt="Capacitor 8" src="https://img.shields.io/badge/Capacitor-8-119eff?style=flat-square&logo=capacitor&logoColor=white" />
+</p>
+
+<p align="center">
+  <a href="#features">Features</a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#how-mesh-routing-works">How it works</a> ·
+  <a href="#android">Android</a> ·
+  <a href="#security-notes">Security</a>
+</p>
+
+> [!WARNING]
+> GhostMesh is an experimental reference architecture, **not an independently audited product**. Do not rely on it for life-safety communications or other high-risk use without a thorough security review.
+
+## At a glance
+
+GhostMesh combines end-to-end encrypted messaging with peer discovery, multi-hop forwarding, expiring messages, and a live network HUD. The **browser build uses a simulated swarm** for development and demos; the Android project includes BLE and Wi-Fi Direct transport bridges.
+
+- **Keep conversations private:** Ed25519 identities and signatures, X25519 session setup, and AES-256-GCM message encryption.
+- **Route around unavailable peers:** discover nearby nodes, select next hops, relay packets, and track acknowledgements.
+- **Leave less behind:** optional message TTLs purge expired content from app state and the encrypted local vault.
+- **See the network:** an interactive 3D globe, diagnostics, and a security panel make activity visible.
 
 ## Quick start
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173  (simulated mesh swarm)
-npm test           # vitest — crypto, security bot, mesh routing
-npm run build      # type-check + production bundle
+npm run dev        # http://localhost:5173 — simulated peer swarm
+npm test           # Vitest: crypto, security bot, and mesh routing
+npm run lint       # Oxlint
+npm run build      # Type-check and create the production bundle in dist/
 ```
 
-Enter any callsign + passphrase (≥ 6 chars) on the lock screen. On the web the
-mesh is populated by a **simulated swarm** of peers with real Ed25519/X25519
-keys so every code path (handshake, signing, routing, ACKs, threat detection)
-runs for real. On Android the radio transports come first.
+On the lock screen, enter any callsign and a passphrase of at least six characters. In the browser demo, generated peer identities exercise the handshake, signing, routing, acknowledgements, and threat-detection paths without requiring nearby devices.
 
-## Feature map
+## Features
 
-| Module | Implementation |
-|--------|----------------|
-| **A · E2EE** | `src/crypto/E2EECore.ts` — Ed25519 identity & packet signatures, X25519 → HKDF-SHA256 → **AES-256-GCM** sessions, RSA-4096-OAEP key wrapping. `E2EEWorker.ts` keeps all secrets inside a dedicated Web Worker; `E2EEClient.ts` is the typed facade. |
-| **A · Self-destruct** | `hooks/useSelfDestruct.ts` + `components/SelfDestructChat.tsx` — per-message TTL fuse bars; expiry purges React state, Zustand and the encrypted IndexedDB vault (`services/VaultStorage.ts`). TTL travels inside the ciphertext so the receiver burns on the same schedule. |
-| **A · Biometrics** | `native/Biometric.ts` + `components/LockScreen.tsx` — fingerprint/face via Capacitor on Android, passphrase fallback on web, auto re-lock on background (`hooks/useAppLifecycle.ts`). |
-| **B · Hybrid mesh** | `mesh/Transport.ts` abstraction; `transports/WifiDirectTransport.ts`, `BleTransport.ts` (GATT framing/reassembly), `SimulatedTransport.ts`. `mesh/MeshManager.ts` does discovery, handshakes, next-hop routing, relaying with loop/TTL guards, ACK tracking. |
-| **B · Node discovery → globe** | `components/MeshMap.tsx` — R3F wireframe Earth, nodes at lat/lon, expanding neon **ping rings** for new peers, great-circle route arcs, click-to-chat. |
-| **C · Security bot** | `services/SecurityBot.ts` — sliding-window heuristics: invalid signature, replay, brute-force handshakes, floods, GCM tamper, TTL abuse, key substitution (MITM). Auto block/rate-limit, redacted HUD log (`components/SecurityPanel.tsx`), OS notifications (`native/Notifications.ts`). Red-team buttons let you trigger attacks live. |
-| **C · Analytics** | `services/AnalyticsEngine.ts` — 1 Hz samples of RX/TX bytes, loss, RTT, avg hops, node count; rendered as live SVG graphs in `components/DiagnosticsDashboard.tsx`. |
-| **D · Chunked files** | `MeshManager.sendFile()` — file → 32 KiB `Uint8Array` chunks, each AES-256-GCM encrypted with a per-file key and AAD-bound to `(transferId, index)`; chunks striped across up to 4 relay paths; per-file key delivered only over the E2EE channel. |
-| **D · AMOLED / Neon HUD** | `styles/index.css` — `data-theme="amoled"` (pure `#000000`, no glow, low DPR, slow rotation) vs `data-theme="neon-hud"` (holographic panels, scanlines, glow). Toggle in the header. |
+| Capability | What it does | Implementation |
+|---|---|---|
+| **End-to-end encryption** | Ed25519 identity and packet signatures; X25519 → HKDF-SHA256 → **AES-256-GCM** sessions; RSA-4096-OAEP key wrapping. The worker owns private key material. | [`src/crypto/`](src/crypto/) |
+| **Self-destructing chat** | Per-message TTL countdowns; expired messages are purged from React state, Zustand, and the encrypted IndexedDB vault. TTL is carried inside ciphertext so the receiver follows the same schedule. | [`useSelfDestruct.ts`](src/hooks/useSelfDestruct.ts) · [`VaultStorage.ts`](src/services/VaultStorage.ts) |
+| **Biometric unlock** | Fingerprint/face authentication on Android, passphrase fallback on the web, and automatic re-lock when the app moves to the background. | [`Biometric.ts`](src/native/Biometric.ts) · [`LockScreen.tsx`](src/components/LockScreen.tsx) · [`useAppLifecycle.ts`](src/hooks/useAppLifecycle.ts) |
+| **Hybrid peer mesh** | A common transport interface for BLE, Wi-Fi Direct, and the browser simulator. Discovery, handshakes, next-hop routing, relaying, loop/TTL guards, and ACK tracking live in the mesh manager. | [`src/mesh/`](src/mesh/) · [`src/mesh/transports/`](src/mesh/transports/) |
+| **Live 3D network map** | Wireframe globe, peer markers, expanding discovery pings, route arcs, and click-to-chat. | [`MeshMap.tsx`](src/components/MeshMap.tsx) |
+| **Security monitor** | Sliding-window detection for invalid signatures, replays, handshake brute force, floods, GCM tampering, TTL abuse, and key substitution. Includes rate-limits/blocks, a redacted event log, notifications, and live red-team controls. | [`SecurityBot.ts`](src/services/SecurityBot.ts) · [`SecurityPanel.tsx`](src/components/SecurityPanel.tsx) |
+| **Network diagnostics** | 1 Hz samples of RX/TX bytes, loss, RTT, average hops, and peer count, shown as live SVG graphs. | [`AnalyticsEngine.ts`](src/services/AnalyticsEngine.ts) · [`DiagnosticsDashboard.tsx`](src/components/DiagnosticsDashboard.tsx) |
+| **Chunked file transfer** | Files are split into 32 KiB chunks and encrypted with a per-file key. AAD binds each chunk to `(transferId, index)`; chunks can be striped across up to four relay paths. The file key is delivered over E2EE. | [`MeshManager.ts`](src/mesh/MeshManager.ts) |
+| **AMOLED / Neon HUD** | Switch between pure-black, low-power AMOLED styling and the holographic neon HUD. | [`src/styles/index.css`](src/styles/index.css) |
+
+## How mesh routing works
+
+The illustration below shows the idea: the sender encrypts the message, reachable peers forward ciphertext toward the recipient, and only the recipient decrypts it. A relay can help deliver a packet without reading its contents. Android transport links are BLE and Wi-Fi Direct; the web demo simulates peers.
+
+<p align="center">
+  <img src="docs/images/mesh-routing.svg" alt="Animated diagram of an encrypted message passing through mesh relay peers to its recipient" width="100%" />
+</p>
+
+The mesh manager handles discovery, handshakes, route selection, relay limits, and acknowledgements. Each packet carries routing metadata so peers can forward it; content is authenticated and encrypted independently of those mutable routing fields.
 
 ## Project layout
 
-```
+```text
 src/
 ├── components/   MeshMap · SelfDestructChat · HudShell · LockScreen · SecurityPanel
 │                 DiagnosticsDashboard · NodeList · Sparkline
 ├── crypto/       E2EECore · E2EEWorker · E2EEClient · encoding
 ├── mesh/         MeshManager · Transport · transports/{Simulated,Ble,WifiDirect}
-├── services/     MeshService (wiring) · SecurityBot · AnalyticsEngine · VaultStorage
-├── native/       Biometric · Notifications · WifiDirectPlugin(+Web) · platform
+├── services/     MeshService · SecurityBot · AnalyticsEngine · VaultStorage
+├── native/       Biometric · Notifications · WifiDirectPlugin · platform
 ├── store/        useGhostStore (Zustand)
 ├── hooks/        useSelfDestruct · useTheme · useAppLifecycle
 ├── styles/       index.css (Tailwind v4 theme)
 └── types/        shared domain types
-android-src/      Kotlin plugins (Wi-Fi Direct, BLE peripheral) + manifest additions
-docs/             CAPACITOR_ANDROID.md — full Android bridging guide
+android-src/      Kotlin plugins (Wi-Fi Direct, BLE peripheral) and manifest additions
+docs/             Android bridging guide and README illustrations
 ```
 
 ## Android
 
-See **[docs/CAPACITOR_ANDROID.md](docs/CAPACITOR_ANDROID.md)** for the
-step-by-step: `npx cap add android`, copying the Kotlin plugins from
-`android-src/`, permissions, GATT UUIDs, the Wi-Fi Direct socket protocol,
-foreground relay service and hardening flags.
+See **[docs/CAPACITOR_ANDROID.md](docs/CAPACITOR_ANDROID.md)** for the full setup guide, including Capacitor project creation, Kotlin plugin wiring, permissions, GATT UUIDs, the Wi-Fi Direct socket protocol, foreground relay service, and hardening flags.
 
 ```bash
-npm run cap:sync   # build + sync
-npm run cap:open   # open Android Studio
+npx cap add android   # once, to create the native project
+npm run cap:sync      # build + sync native assets/plugins
+npm run cap:open      # open Android Studio
 ```
+
+Native radio behavior requires a correctly configured Android project, permissions, and compatible devices. The web simulator does not exercise physical BLE or Wi-Fi Direct radios.
 
 ## Web deployment (Vercel)
 
-The app is a static Vite SPA — deploy the `dist/` output, not the source.
+GhostMesh is a static Vite SPA. Deploy the generated `dist/` directory, not the source tree.
 
-1. Import the repo in Vercel and keep the auto-detected **Vite** preset
-   (build `npm run build`, output `dist`).
-2. Deploy. Serve over **HTTPS** — `crypto.subtle` (WebCrypto) and the E2EE
-   worker only work in a secure context.
+1. Import the repository in Vercel and use the Vite preset (`npm run build`, output directory `dist`).
+2. Serve over **HTTPS**. WebCrypto (`crypto.subtle`) and the E2EE worker require a secure context.
 
-If after "Generate keys & enter" the screen ever goes blank, open DevTools:
-an uncaught render error now lands on the `SIGNAL LOST` boundary panel
-(instead of a silent black page) and prints the error to the console. A
-frozen "BOOTING MESH…" means the worker asset
-(`assets/E2EEWorker-*.js`) didn't load — check the host is serving `dist/`
-in full (404 / CSP / MIME) — and reload.
+If the screen goes blank after **Generate keys & enter**, check the browser console: rendering errors are caught by the `SIGNAL LOST` boundary panel. If **BOOTING MESH…** remains frozen, confirm the deployed `assets/E2EEWorker-*.js` file is present and served without a 404, CSP, or MIME-type error, then reload.
 
 ## Security notes
 
-* Private keys never leave the E2EE worker; `PANIC` wipes keys, sessions and the vault.
-* Packet signatures cover `id|type|from|to|timestamp|iv|payload`; mutable routing
-  fields (`ttl`, `hopCount`, `path`) are excluded so relays can forward without
-  re-signing but cannot alter content.
-* Ciphertext AAD binds each message to `(id, from, to)` — spliced packets fail GCM.
-* Coordinates are fuzzed before being advertised; only coarse location is used.
-* This is a reference architecture, not an audited product. Do not rely on it for
-  life-safety communications without an independent review.
+- Private keys stay inside the E2EE worker. **PANIC** wipes keys, sessions, and the vault.
+- Packet signatures cover `id|type|from|to|timestamp|iv|payload`. Mutable routing fields (`ttl`, `hopCount`, `path`) are excluded so relays can forward packets without re-signing them; they cannot alter the authenticated content.
+- Ciphertext AAD binds each message to `(id, from, to)`, so spliced packets fail GCM authentication.
+- Coordinates are fuzzed before advertisement; only coarse location is used.
+- The web build's swarm is simulated. It is useful for exercising application flows, not for validating real-world radio behavior or security.
+- This is a reference architecture, not a substitute for an independent cryptographic and operational security audit.
 
 ## License
 

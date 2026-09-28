@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+  <title id="title">GhostMesh — private messages, no single route</title>
+  <desc id="desc">A neon peer-to-peer mesh globe with animated connection pulses beside the GhostMesh wordmark.</desc>
+  <defs>
+    <linearGradient id="cyanPurple" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00f3ff"/>
+      <stop offset="1" stop-color="#b000ff"/>
+    </linearGradient>
+    <linearGradient id="titleGradient" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#e7fbff"/>
+      <stop offset="1" stop-color="#95a9ff"/>
+    </linearGradient>
+    <radialGradient id="globeFill" cx="34%" cy="28%" r="78%">
+      <stop offset="0" stop-color="#102b3d"/>
+      <stop offset="0.7" stop-color="#08121e"/>
+      <stop offset="1" stop-color="#05090f"/>
+    </radialGradient>
+    <radialGradient id="purpleGlow">
+      <stop offset="0" stop-color="#b000ff" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#b000ff" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse">
+      <path d="M36 0H0V36" fill="none" stroke="#1a5267" stroke-opacity=".22" stroke-width=".7"/>
+      <circle cx="0" cy="0" r="1" fill="#00f3ff" fill-opacity=".24"/>
+    </pattern>
+    <clipPath id="globeClip"><circle cx="920" cy="225" r="136"/></clipPath>
+    <filter id="softGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="smallGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="2.2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <style>
+      text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      .eyebrow { fill: #00f3ff; font-size: 11px; font-weight: 700; letter-spacing: 3px; }
+      .muted { fill: #8aa4bd; }
+      .tiny { font-size: 9px; letter-spacing: 1.5px; }
+      .animated { animation-play-state: running; }
+      .orbit { transform-origin: 920px 225px; animation: orbit 38s linear infinite; }
+      .orbit-reverse { transform-origin: 920px 225px; animation: orbit 54s linear infinite reverse; }
+      .pulse { transform-box: fill-box; transform-origin: center; animation: pulse 2.2s ease-out infinite; }
+      .pulse-delay { animation-delay: 1.1s; }
+      .flow { stroke-dasharray: 5 12; animation: flow 2.2s linear infinite; }
+      .scan { animation: scan 7s linear infinite; }
+      @keyframes orbit { to { transform: rotate(360deg); } }
+      @keyframes pulse { 0% { opacity: .75; transform: scale(.72); } 78%, 100% { opacity: 0; transform: scale(2.5); } }
+      @keyframes flow { to { stroke-dashoffset: -68; } }
+      @keyframes scan { from { transform: translateY(-420px); } to { transform: translateY(420px); } }
+      @media (prefers-reduced-motion: reduce) {
+        .animated { animation: none !important; }
+      }
+    </style>
+  </defs>
+
+  <rect width="1200" height="420" rx="18" fill="#050a10"/>
+  <rect width="1200" height="420" rx="18" fill="url(#grid)"/>
+  <ellipse cx="937" cy="221" rx="300" ry="250" fill="url(#purpleGlow)"/>
+  <path d="M0 96H600M0 330H650" stroke="#00f3ff" stroke-opacity=".12"/>
+  <path d="M680 0V420" stroke="#00f3ff" stroke-opacity=".1" stroke-dasharray="2 8"/>
+
+  <!-- Wordmark and product promise -->
+  <g>
+    <g transform="translate(72 46)">
+      <path d="M20 2C9 2 2 10 2 21v22l6-5 6 5 6-5 6 5 6-5 6 5V21C38 10 31 2 20 2Z" fill="#07121b" stroke="url(#cyanPurple)" stroke-width="2.2"/>
+      <circle cx="14" cy="20" r="2.2" fill="#00f3ff"/>
+      <circle cx="26" cy="20" r="2.2" fill="#b000ff"/>
+    </g>
+    <text x="124" y="76" fill="#e7f8ff" font-size="24" font-weight="800" letter-spacing="2">GHOST<tspan fill="#00f3ff">MESH</tspan></text>
+    <text x="73" y="140" class="eyebrow">DECENTRALIZED STEALTH MESSENGER</text>
+    <text x="70" y="204" fill="url(#titleGradient)" font-size="43" font-weight="800" letter-spacing="-1.4">PRIVATE MESSAGES.</text>
+    <text x="70" y="257" fill="#00f3ff" font-size="43" font-weight="800" letter-spacing="-1.4">NO SINGLE ROUTE.</text>
+    <text x="74" y="294" class="muted" font-size="14">End-to-end encrypted messaging over an opportunistic</text>
+    <text x="74" y="316" class="muted" font-size="14">peer-to-peer mesh. Built for web and Android.</text>
+
+    <g transform="translate(74 348)">
+      <rect width="166" height="34" rx="4" fill="#08151e" stroke="#00f3ff" stroke-opacity=".42"/>
+      <circle cx="16" cy="17" r="3.5" fill="#00f3ff" filter="url(#smallGlow)"/>
+      <text x="29" y="21" fill="#c8faff" class="tiny" font-weight="700">END-TO-END ENCRYPTED</text>
+      <rect x="178" width="133" height="34" rx="4" fill="#0c0d1b" stroke="#b000ff" stroke-opacity=".48"/>
+      <circle cx="194" cy="17" r="3.5" fill="#b000ff" filter="url(#smallGlow)"/>
+      <text x="207" y="21" fill="#e9d4ff" class="tiny" font-weight="700">MULTI-HOP MESH</text>
+      <rect x="323" width="126" height="34" rx="4" fill="#08151e" stroke="#54718a" stroke-opacity=".5"/>
+      <text x="339" y="21" fill="#b4c8d8" class="tiny" font-weight="700">WEB + ANDROID</text>
+    </g>
+  </g>
+
+  <!-- Animated network globe -->
+  <g>
+    <circle cx="920" cy="225" r="165" fill="none" stroke="#b000ff" stroke-opacity=".13" stroke-width="1" class="orbit animated"/>
+    <circle cx="920" cy="225" r="153" fill="none" stroke="#00f3ff" stroke-opacity=".17" stroke-width="1" stroke-dasharray="2 7" class="orbit-reverse animated"/>
+    <circle cx="920" cy="225" r="136" fill="url(#globeFill)" stroke="#00f3ff" stroke-opacity=".62" stroke-width="1.3" filter="url(#smallGlow)"/>
+    <g clip-path="url(#globeClip)" fill="none" stroke="#00ddeb" stroke-opacity=".24" stroke-width=".9">
+      <ellipse cx="920" cy="225" rx="54" ry="136"/>
+      <ellipse cx="920" cy="225" rx="100" ry="136"/>
+      <ellipse cx="920" cy="225" rx="136" ry="48"/>
+      <ellipse cx="920" cy="225" rx="136" ry="94"/>
+      <path d="M776 225H1064M789 169H1051M789 281H1051" stroke-opacity=".36"/>
+    </g>
+    <path d="M820 156Q894 102 986 133T1036 222" fill="none" stroke="#00f3ff" stroke-opacity=".78" stroke-width="1.4" class="flow animated" filter="url(#smallGlow)"/>
+    <path d="M806 260Q865 322 942 308T1027 251" fill="none" stroke="#b000ff" stroke-opacity=".72" stroke-width="1.4" class="flow animated"/>
+    <path d="M836 123Q882 190 1004 290" fill="none" stroke="#ffb300" stroke-opacity=".5" stroke-width="1" stroke-dasharray="3 6"/>
+
+    <!-- Node markers and expanding pings -->
+    <g filter="url(#smallGlow)">
+      <circle cx="820" cy="156" r="13" fill="none" stroke="#00f3ff" stroke-opacity=".65" class="pulse animated"/>
+      <circle cx="820" cy="156" r="5" fill="#00f3ff"/>
+      <circle cx="986" cy="133" r="12" fill="none" stroke="#00f3ff" stroke-opacity=".65" class="pulse pulse-delay animated"/>
+      <circle cx="986" cy="133" r="4.5" fill="#00f3ff"/>
+      <circle cx="1036" cy="222" r="12" fill="none" stroke="#b000ff" stroke-opacity=".7" class="pulse animated"/>
+      <circle cx="1036" cy="222" r="5" fill="#b000ff"/>
+      <circle cx="942" cy="308" r="12" fill="none" stroke="#00f3ff" stroke-opacity=".65" class="pulse pulse-delay animated"/>
+      <circle cx="942" cy="308" r="4.5" fill="#00f3ff"/>
+      <circle cx="836" cy="123" r="4" fill="#ffb300"/>
+      <circle cx="806" cy="260" r="4" fill="#b000ff"/>
+    </g>
+
+    <!-- HUD readouts -->
+    <g>
+      <rect x="795" y="27" width="245" height="46" rx="5" fill="#08131d" fill-opacity=".94" stroke="#00f3ff" stroke-opacity=".38"/>
+      <circle cx="813" cy="50" r="4" fill="#2bff88"/>
+      <text x="826" y="47" fill="#c9e4f2" class="tiny" font-weight="700">MESH STATUS</text>
+      <text x="826" y="62" fill="#2bff88" font-size="9" letter-spacing="1.6">ONLINE <tspan fill="#4a6078">//</tspan> DISCOVERING PEERS</text>
+      <rect x="824" y="363" width="232" height="34" rx="4" fill="#08131d" fill-opacity=".95" stroke="#b000ff" stroke-opacity=".42"/>
+      <text x="840" y="385" fill="#aebed0" class="tiny">ROUTE</text>
+      <text x="884" y="385" fill="#00f3ff" class="tiny" font-weight="700">SENDER</text>
+      <path d="M943 380h28" stroke="#b000ff" stroke-width="1.5" stroke-dasharray="3 4"/>
+      <text x="981" y="385" fill="#d9c8ef" class="tiny" font-weight="700">PEER</text>
+      <path d="M1016 380h20" stroke="#00f3ff" stroke-width="1.5"/>
+    </g>
+    <path d="M40 405H1160" stroke="#00f3ff" stroke-opacity=".24"/>
+    <path d="M40 405H300" stroke="#00f3ff" stroke-width="2" stroke-opacity=".8"/>
+    <rect x="0" y="0" width="1200" height="1" fill="#fff" opacity=".05" class="scan animated"/>
+  </g>
+</svg>
