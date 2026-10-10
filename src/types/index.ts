@@ -6,7 +6,8 @@
 /** Hex-encoded truncated SHA-256 of a node's Ed25519 public key. */
 export type NodeId = string
 
-export type TransportKind = 'internet' | 'wifi-direct' | 'ble' | 'simulated'
+/** 'local' = real BroadcastChannel link between tabs of the same browser. 'simulated' = fake demo swarm. */
+export type TransportKind = 'internet' | 'wifi-direct' | 'ble' | 'local' | 'simulated'
 
 export type NodeStatus = 'discovered' | 'handshaking' | 'trusted' | 'blocked'
 
@@ -136,6 +137,8 @@ export interface FileTransfer {
   status: 'chunking' | 'routing' | 'reassembling' | 'complete' | 'failed'
   /** Which relay node each chunk index took */
   chunkRoutes: Record<number, NodeId>
+  /** Object URL for a fully received and hash-verified file (receiver side). */
+  blobUrl?: string
   /** base64 SHA-256 of the whole plaintext file for verification */
   sha256: string
   startedAt: number

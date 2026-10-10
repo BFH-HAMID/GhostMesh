@@ -57,7 +57,11 @@ export function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
 export function secureWipe(bytes: Uint8Array | undefined | null): void {
   if (!bytes) return
   bytes.fill(0)
-  crypto.getRandomValues(bytes)
+  // Web Crypto caps getRandomValues at 64 KiB per call — fill in slices so large buffers work.
+  const MAX = 65536
+  for (let off = 0; off < bytes.length; off += MAX) {
+    crypto.getRandomValues(bytes.subarray(off, Math.min(off + MAX, bytes.length)))
+  }
   bytes.fill(0)
 }
 

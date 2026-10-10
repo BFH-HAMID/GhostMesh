@@ -1,6 +1,9 @@
 /** Sidebar list of peers with quick chat access. */
 import { useGhostStore, selectPeers, useShallow } from '@/store/useGhostStore'
 
+const transportLabel = (t: string) =>
+  t === 'simulated' ? 'SIM (fake)' : t === 'local' ? 'LOCAL tab' : t === 'ble' ? 'BLE' : t === 'wifi-direct' ? 'Wi-Fi Direct' : t
+
 export default function NodeList() {
   // useShallow is REQUIRED here: selectPeers returns a fresh array each call,
   // and useSyncExternalStore loops forever on an unstable snapshot.
@@ -15,6 +18,11 @@ export default function NodeList() {
     <div className="flex h-full flex-col">
       <div className="hud-title px-3 py-2">Nodes in range · {peers.length}</div>
       <div className="flex-1 overflow-y-auto">
+        {peers.length === 0 && (
+          <div className="px-3 py-2 text-[10px] leading-relaxed text-ghost-dim">
+            No peers in range. Open GhostMesh in another tab of this same browser to chat for real. Use DEMO only to see fake test nodes.
+          </div>
+        )}
         {peers
           .slice()
           .sort((a, b) => b.rssi - a.rssi)
@@ -37,7 +45,7 @@ export default function NodeList() {
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-cyan">{p.alias}</span>
                   <span className="block truncate text-[9px] text-ghost-dim">
-                    {p.id.slice(0, 10)} · {p.transport} · {p.hops}h
+                    {p.id.slice(0, 10)} · {transportLabel(p.transport)} · {p.hops}h
                   </span>
                 </span>
                 {unread(p.id) > 0 && <span className="rounded-sm bg-purple/30 px-1 text-[9px] text-purple">{unread(p.id)}</span>}

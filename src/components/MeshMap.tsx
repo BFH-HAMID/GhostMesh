@@ -44,25 +44,31 @@ function arcPoints(a: THREE.Vector3, b: THREE.Vector3, segments = 32): THREE.Vec
   return pts
 }
 
+const SIM = '#6b7f96'
+
 const nodeColor = (n: MeshNode) =>
-  n.isSelf ? PURPLE : n.status === 'blocked' ? RED : n.status === 'trusted' ? CYAN : AMBER
+  n.isSelf ? PURPLE : n.status === 'blocked' ? RED : n.transport === 'simulated' ? SIM : n.status === 'trusted' ? CYAN : AMBER
+
+/** Short tag shown next to a node so fake/demo nodes can never pass as real ones. */
+const nodeTag = (n: MeshNode) => (n.isSelf ? 'YOU' : n.transport === 'simulated' ? 'SIM' : n.transport === 'local' ? 'TAB' : n.transport.toUpperCase())
 
 /* ------------------------------------------------------------------------ */
 
+/**
+ * The globe itself does NOT spin. Markers are positioned in fixed lat/lon
+ * space, so if the sphere rotated they would drift away from their real
+ * locations. The camera orbits instead (OrbitControls autoRotate).
+ */
 function Globe({ lowPower }: { lowPower: boolean }) {
-  const ref = useRef<THREE.Group>(null)
-  useFrame((_, dt) => {
-    if (ref.current) ref.current.rotation.y += dt * (lowPower ? 0.02 : 0.05)
-  })
   return (
-    <group ref={ref}>
+    <group>
       <mesh>
         <sphereGeometry args={[R - 0.01, 48, 48]} />
         <meshBasicMaterial color="#03070c" transparent opacity={0.92} />
       </mesh>
       <mesh>
         <sphereGeometry args={[R, lowPower ? 24 : 40, lowPower ? 24 : 40]} />
-        <meshBasicMaterial color={CYAN} wireframe transparent opacity={lowPower ? 0.07 : 0.13} />
+        <meshBasicMaterial color={CYAN} wireframe transparent opacity={lowPower ? 0.2 : 0.25} />
       </mesh>
       {!lowPower && (
         <mesh>
@@ -134,19 +140,25 @@ function NodeMarker({ node, fresh, onSelect }: { node: MeshNode; fresh: boolean;
         <meshBasicMaterial color={color} transparent opacity={hover ? 0.45 : 0.18} depthWrite={false} />
       </mesh>
       {fresh && <PingRing position={pos} bornAt={node.firstSeen} color={color} />}
-      {(hover || node.isSelf) && (
-        <Html position={pos} distanceFactor={6} style={{ pointerEvents: 'none' }}>
+      <Html position={pos} distanceFactor={6} style={{ pointerEvents: 'none' }}>
+        {hover || node.isSelf ? (
           <div
             className="px-2 py-1 text-[10px] whitespace-nowrap border font-mono"
             style={{ background: 'rgba(5,10,16,0.85)', borderColor: color, color, boxShadow: `0 0 8px ${color}55` }}
           >
-            <div className="font-bold tracking-widest">{node.isSelf ? 'YOU' : node.alias.toUpperCase()}</div>
+            <div className="font-bold tracking-widest">
+              {node.isSelf ? 'YOU' : node.alias.toUpperCase()} <span className="opacity-70">[{nodeTag(node)}]</span>
+            </div>
             <div className="opacity-70">
-              {node.id.slice(0, 8)} · {node.transport} · {node.isSelf ? 'origin' : `${node.hops}h ${node.latencyMs}ms`}
+              ID {node.id.slice(0, 8)} · {node.isSelf ? `${node.coord.lat.toFixed(2)}, ${node.coord.lon.toFixed(2)}` : `${node.hops}h ${node.latencyMs}ms`}
             </div>
           </div>
-        </Html>
-      )}
+        ) : (
+          <div className="whitespace-nowrap font-mono text-[9px] tracking-wider" style={{ color, textShadow: '0 0 4px #000' }}>
+            {nodeTag(node)} {node.isSelf ? '' : node.alias}
+          </div>
+        )}
+      </Html>
     </group>
   )
 }
@@ -242,6 +254,15 @@ export default function MeshMap() {
         </Suspense>
       </Canvas>
 
+      {peers.length === 0 && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-16 text-center text-[11px] tracking-widest text-ghost">
+          <span className="animate-blink">WAITING FOR NODES IN RANGE…</span>
+          <div className="mt-1 text-[10px] normal-case tracking-normal text-ghost-dim">
+            Open GhostMesh in another tab of this browser to test real encrypted chat.
+          </div>
+        </div>
+      )}
+
       {/* HUD overlay */}
       <div className="pointer-events-none absolute left-3 top-3 hud-panel px-3 py-2 text-[10px] leading-relaxed">
         <div className="hud-title mb-1">Mesh topology</div>
@@ -250,7 +271,7 @@ export default function MeshMap() {
           <span className="neon-text-cyan">{trusted}</span>
         </div>
         <div className="mt-1 flex flex-wrap gap-x-3 opacity-80">
-          {(['wifi-direct', 'ble', 'internet', 'simulated'] as const).map((k) => {
+          {(['local', 'wifi-direct', 'ble', 'internet', 'simulated'] as const).map((k) => {
             const st = transports[k]
             if (!st) return null
             const c = st === 'active' ? 'text-ok' : st === 'unavailable' ? 'text-ghost-dim' : 'text-warn'
@@ -268,8 +289,9 @@ export default function MeshMap() {
           <span className="flex items-center gap-1"><i className="inline-block h-2 w-2 rounded-full bg-cyan" /> trusted</span>
           <span className="flex items-center gap-1"><i className="inline-block h-2 w-2 rounded-full bg-warn" /> handshake</span>
           <span className="flex items-center gap-1"><i className="inline-block h-2 w-2 rounded-full bg-danger" /> blocked</span>
+          <span className="flex items-center gap-1"><i className="inline-block h-2 w-2 rounded-full" style={{ background: SIM }} /> SIM (fake demo)</span>
         </div>
-        <div className="mt-1 opacity-60">drag to orbit · scroll to zoom · click node to chat</div>
+        <div className="mt-1 opacity-60">drag to orbit · scroll to zoom · click a trusted node to chat</div>
       </div>
     </div>
   )

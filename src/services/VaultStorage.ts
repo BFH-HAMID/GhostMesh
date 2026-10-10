@@ -103,7 +103,7 @@ export const VaultStorage = {
     const store = tx(db, 'readwrite')
     const rec = (await reqToPromise(store.get(id))) as StoredMessage | undefined
     if (rec) {
-      const junk = new Uint8Array(rec.ciphertext.length)
+      const junk = new Uint8Array(Math.min(512, rec.ciphertext.length))
       crypto.getRandomValues(junk)
       rec.ciphertext = btoa(String.fromCharCode(...junk.subarray(0, 512)))
       secureWipe(junk)

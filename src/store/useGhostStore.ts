@@ -15,7 +15,7 @@ import type {
   TransportKind,
 } from '@/types'
 
-export type AppPhase = 'locked' | 'booting' | 'online' | 'offline'
+export type AppPhase = 'locked' | 'booting' | 'online' | 'demo' | 'offline'
 export type View = 'map' | 'chat' | 'diagnostics' | 'security' | 'files'
 
 interface GhostState {
