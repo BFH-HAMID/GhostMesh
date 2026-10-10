@@ -199,7 +199,7 @@ export default function SelfDestructChat() {
 
       {/* Composer */}
       <form onSubmit={(e) => void send(e)} className="hud-panel border-x-0 border-b-0 p-2">
-        <div className="mb-2 flex items-center gap-1 text-[10px]">
+        <div className="mb-2 flex flex-wrap items-center gap-1 text-[10px]">
           <span className="mr-1 text-ghost">TTL</span>
           {TTL_PRESETS.map((t) => (
             <button

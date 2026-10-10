@@ -46,7 +46,7 @@ export default function HudShell() {
   return (
     <div className="grid-bg flex h-full flex-col">
       {/* Status bar */}
-      <header className="hud-panel flex items-center gap-3 border-x-0 border-t-0 px-3 py-1.5 text-[10px]">
+      <header className="hud-panel flex flex-wrap items-center gap-x-3 gap-y-1 border-x-0 border-t-0 px-3 py-1.5 text-[10px]">
         <span className="font-display tracking-[0.3em] neon-text-cyan">GHOSTMESH</span>
         <span className={`flex items-center gap-1 ${phase === 'online' ? 'text-ok' : phase === 'demo' ? 'text-purple' : 'text-warn'}`}>
           <i className={`inline-block h-1.5 w-1.5 rounded-full ${phase === 'online' ? 'bg-ok animate-ping-slow' : phase === 'demo' ? 'bg-purple' : 'bg-warn'}`} />
