@@ -10,7 +10,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useGhostStore, selectConversation, useShallow } from '@/store/useGhostStore'
 import { getMesh, burnMessage } from '@/services/MeshService'
 import { formatCountdown, ttlProgress, useSelfDestruct } from '@/hooks/useSelfDestruct'
-import type { ChatMessage } from '@/types'
+import type { ChatMessage, FileTransfer } from '@/types'
 
 const TTL_PRESETS: Array<{ label: string; ms: number }> = [
   { label: '10s', ms: 10_000 },
@@ -38,7 +38,7 @@ function StatusGlyph({ m }: { m: ChatMessage }) {
   )
 }
 
-function Bubble({ m, now }: { m: ChatMessage; now: number }) {
+function Bubble({ m, now, transfer }: { m: ChatMessage; now: number; transfer?: FileTransfer }) {
   const p = ttlProgress(m.createdAt, m.expiresAt, now)
   const out = m.direction === 'out'
   const critical = p < 0.15
@@ -59,6 +59,21 @@ function Bubble({ m, now }: { m: ChatMessage; now: number }) {
             <span style={{ color }}>▣</span>
             <span className="truncate">{m.attachment.name}</span>
             <span className="opacity-60">{(m.attachment.size / 1024).toFixed(1)}kB</span>
+            {transfer && transfer.direction === 'in' && transfer.status === 'complete' && transfer.blobUrl && (
+              <a href={transfer.blobUrl} download={m.attachment.name} className="ml-auto underline" style={{ color }}>
+                save
+              </a>
+            )}
+            {transfer && transfer.direction === 'in' && transfer.status !== 'complete' && (
+              <span className="ml-auto opacity-70">
+                {transfer.status === 'failed' ? 'failed' : `receiving ${transfer.chunksDone}/${transfer.totalChunks}`}
+              </span>
+            )}
+            {transfer && transfer.direction === 'out' && (
+              <span className="ml-auto opacity-70">
+                {transfer.status === 'failed' ? 'partly lost' : `sent ${transfer.chunksDone}/${transfer.totalChunks}`}
+              </span>
+            )}
           </div>
         )}
         <div className="whitespace-pre-wrap break-words leading-relaxed">{m.body}</div>
@@ -100,6 +115,7 @@ export default function SelfDestructChat() {
   const setDefaultTtl = useGhostStore((s) => s.setDefaultTtl)
   const back = useGhostStore((s) => s.setActiveConversation)
   const upsertTransfer = useGhostStore((s) => s.upsertTransfer)
+  const transfers = useGhostStore((s) => s.transfers)
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
@@ -177,7 +193,7 @@ export default function SelfDestructChat() {
           </div>
         )}
         {messages.map((m) => (
-          <Bubble key={m.id} m={m} now={now} />
+          <Bubble key={m.id} m={m} now={now} transfer={m.attachment ? transfers[m.attachment.transferId] : undefined} />
         ))}
       </div>
 

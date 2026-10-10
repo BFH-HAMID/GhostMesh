@@ -5,7 +5,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { useGhostStore, selectPeers, selectLatestSample, useShallow } from '@/store/useGhostStore'
 import { useTheme } from '@/hooks/useTheme'
-import { shutdownMesh } from '@/services/MeshService'
+import { isDemoEnabled, setDemoEnabled, shutdownMesh } from '@/services/MeshService'
 import NodeList from './NodeList'
 import SelfDestructChat from './SelfDestructChat'
 import SecurityPanel from './SecurityPanel'
@@ -48,9 +48,9 @@ export default function HudShell() {
       {/* Status bar */}
       <header className="hud-panel flex items-center gap-3 border-x-0 border-t-0 px-3 py-1.5 text-[10px]">
         <span className="font-display tracking-[0.3em] neon-text-cyan">GHOSTMESH</span>
-        <span className={`flex items-center gap-1 ${phase === 'online' ? 'text-ok' : 'text-warn'}`}>
-          <i className={`inline-block h-1.5 w-1.5 rounded-full ${phase === 'online' ? 'bg-ok animate-ping-slow' : 'bg-warn'}`} />
-          {phase.toUpperCase()}
+        <span className={`flex items-center gap-1 ${phase === 'online' ? 'text-ok' : phase === 'demo' ? 'text-purple' : 'text-warn'}`}>
+          <i className={`inline-block h-1.5 w-1.5 rounded-full ${phase === 'online' ? 'bg-ok animate-ping-slow' : phase === 'demo' ? 'bg-purple' : 'bg-warn'}`} />
+          {phase === 'demo' ? 'DEMO · SIMULATED' : phase.toUpperCase()}
         </span>
         <span className="hidden text-ghost sm:inline">
           ID <span className="text-cyan">{identity?.nodeId.slice(0, 12)}</span> · {identity?.alias}
@@ -74,6 +74,16 @@ export default function HudShell() {
             ⚠ {critical}
           </button>
         )}
+        <button
+          className={`btn-hud !py-0.5 ${isDemoEnabled() ? 'bg-purple/20' : ''}`}
+          title={isDemoEnabled() ? 'Demo ON: fake simulated nodes are running. Click to turn off (restarts the mesh).' : 'Demo OFF: only real links. Click to add simulated test nodes (restarts the mesh).'}
+          onClick={() => {
+            setDemoEnabled(!isDemoEnabled())
+            void shutdownMesh().then(() => setPhase('locked'))
+          }}
+        >
+          DEMO {isDemoEnabled() ? 'ON' : 'OFF'}
+        </button>
         <button className="btn-hud !py-0.5" onClick={toggle} title="Toggle AMOLED / Neon HUD">
           {theme === 'amoled' ? 'AMOLED' : 'NEON HUD'}
         </button>

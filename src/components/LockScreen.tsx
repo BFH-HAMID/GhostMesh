@@ -6,7 +6,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { authenticateBiometric, biometricAvailable } from '@/native/Biometric'
 import { useGhostStore } from '@/store/useGhostStore'
-import { bootMesh } from '@/services/MeshService'
+import { bootMesh, currentPhase } from '@/services/MeshService'
 import { sha256 } from '@/crypto/E2EECore'
 import { bytesToHex, utf8ToBytes } from '@/crypto/encoding'
 
@@ -32,7 +32,7 @@ export default function LockScreen() {
     try {
       localStorage.setItem(ALIAS_KEY, alias)
       if (identity) {
-        setPhase('online') // re-lock case: mesh still running
+        setPhase(currentPhase()) // re-lock case: mesh still running
       } else {
         await bootMesh(alias)
       }

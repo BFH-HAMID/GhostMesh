@@ -1,25 +1,35 @@
 import { describe, expect, it, vi } from 'vitest'
 import { MeshManager, type CryptoProvider } from './MeshManager'
 import { SimulatedTransport } from './transports/SimulatedTransport'
+import { LocalTransport } from './transports/LocalTransport'
 import {
   canonicalPacketBytes,
+  decryptBytes,
   decryptString,
   deriveNodeId,
   deriveSessionKey,
+  encryptBytes,
   encryptString,
+  exportAesKey,
+  generateAesKey,
   generateKeyBundle,
+  importAesKey,
   sessionSalt,
+  sha256,
   sign,
   verify,
   type NodeKeyBundle,
 } from '@/crypto/E2EECore'
-import { base64ToBytes, bytesToBase64 } from '@/crypto/encoding'
+import { base64ToBytes, bytesToBase64, utf8ToBytes } from '@/crypto/encoding'
+import type { ChatMessage, FileTransfer } from '@/types'
 
-/** In-process crypto provider (no Worker in node) built on the same primitives. */
+/** In-process crypto provider built on the same primitives as the worker (no Worker in node). */
 function inProcessCrypto(): CryptoProvider {
   let kb: NodeKeyBundle | null = null
   let nodeId = ''
   const sessions = new Map<string, CryptoKey>()
+  const fileKeys = new Map<string, CryptoKey>()
+  const chunks = new Map<string, Uint8Array[]>()
   return {
     async init() {
       kb = generateKeyBundle()
@@ -44,24 +54,52 @@ function inProcessCrypto(): CryptoProvider {
     async verifyPacket(h, sig, pub) {
       return { valid: verify(canonicalPacketBytes(h), base64ToBytes(sig), base64ToBytes(pub)) }
     },
-    async chunkFile(_id, data, size = 1024) {
-      return { totalChunks: Math.max(1, Math.ceil(data.byteLength / size)), sha256: 'x' }
+    async chunkFile(id, data, size = 1024) {
+      const d = new Uint8Array(data)
+      const parts: Uint8Array[] = []
+      for (let off = 0; off < d.length; off += size) parts.push(d.slice(off, off + size))
+      if (parts.length === 0) parts.push(new Uint8Array(0))
+      chunks.set(id, parts)
+      fileKeys.set(id, await generateAesKey(true))
+      return { totalChunks: parts.length, sha256: bytesToBase64(await sha256(d)) }
     },
-    async encryptChunk(_id, index) {
-      return { index, iv: 'iv', ciphertext: new ArrayBuffer(8) }
+    async encryptChunk(id, index) {
+      const plain = chunks.get(id)![index]!
+      const { iv, ciphertext } = await encryptBytes(fileKeys.get(id)!, plain, utf8ToBytes(`${id}:${index}`))
+      return { index, iv: bytesToBase64(iv), ciphertext: ciphertext.buffer as ArrayBuffer }
     },
-    async exportFileKey() {
-      return { rawKey: 'k' }
+    async decryptChunk(id, index, iv, ct) {
+      const pt = await decryptBytes(fileKeys.get(id)!, base64ToBytes(iv), new Uint8Array(ct), utf8ToBytes(`${id}:${index}`))
+      return { index, plaintext: pt.buffer as ArrayBuffer }
     },
-    async purgeTransfer() {},
+    async exportFileKey(id) {
+      return { rawKey: bytesToBase64(await exportAesKey(fileKeys.get(id)!)) }
+    },
+    async importFileKey(id, raw) {
+      fileKeys.set(id, await importAesKey(base64ToBytes(raw), true))
+    },
+    async purgeTransfer(id) {
+      chunks.delete(id)
+      fileKeys.delete(id)
+    },
     async wipeAll() {
       sessions.clear()
+      fileKeys.clear()
+      chunks.clear()
       kb = null
     },
   }
 }
 
-describe('MeshManager + SimulatedTransport', () => {
+async function waitFor(cond: () => boolean, ms = 4000): Promise<void> {
+  const t0 = Date.now()
+  while (!cond()) {
+    if (Date.now() - t0 > ms) throw new Error('waitFor timeout')
+    await new Promise((r) => setTimeout(r, 25))
+  }
+}
+
+describe('MeshManager + SimulatedTransport (demo swarm)', () => {
   it('boots, discovers peers, completes signed handshakes and routes an E2EE message', async () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
     const sim = new SimulatedTransport({ initialPeers: 3, maxPeers: 3, churnMs: 60_000 })
@@ -71,14 +109,13 @@ describe('MeshManager + SimulatedTransport', () => {
 
     const self = await mesh.start('tester', { lat: 0, lon: 0 })
     expect(self.id).toMatch(/^[0-9a-f]{32}$/)
-    // Let handshake ACKs (real timers) flow
     await new Promise((r) => setTimeout(r, 400))
 
     const peers = [...mesh.nodes.values()].filter((n) => !n.isSelf)
     expect(peers.length).toBe(3)
     expect(peers.every((p) => p.status === 'trusted')).toBe(true)
+    expect(peers.every((p) => p.transport === 'simulated')).toBe(true)
 
-    // Outbound message must be ciphertext on the wire
     let wire: string | undefined
     sim.onOutbound = (_to, p) => {
       if (p.type === 'MSG') wire = p.payload
@@ -89,7 +126,6 @@ describe('MeshManager + SimulatedTransport', () => {
     expect(wire).toBeDefined()
     expect(wire).not.toContain('burn after reading')
 
-    // Forged handshake must be caught by the security bot
     sim.injectHostile('forged')
     await new Promise((r) => setTimeout(r, 50))
     expect(threats).toContain('SIGNATURE_INVALID')
@@ -97,4 +133,58 @@ describe('MeshManager + SimulatedTransport', () => {
     await mesh.stop()
     vi.useRealTimers()
   })
+})
+
+describe('MeshManager + LocalTransport (real tab-to-tab link)', () => {
+  it('two nodes discover each other, exchange an encrypted chat and a 100 KB file', async () => {
+    const alice = new MeshManager(inProcessCrypto(), { transports: [new LocalTransport()], notify: false })
+    const bob = new MeshManager(inProcessCrypto(), { transports: [new LocalTransport()], notify: false })
+
+    const received: ChatMessage[] = []
+    bob.on('message', (m) => received.push(m))
+    const files: FileTransfer[] = []
+    bob.on('transfer', (t) => files.push({ ...t }))
+
+    await alice.start('alice', { lat: 23.81, lon: 90.41 })
+    await bob.start('bob', { lat: 22.36, lon: 91.78 })
+    const bobId = bob.self!.id
+    const aliceId = alice.self!.id
+
+    await waitFor(() => alice.nodes.get(bobId)?.status === 'trusted' && bob.nodes.get(aliceId)?.status === 'trusted')
+    expect(alice.nodes.get(bobId)?.transport).toBe('local')
+
+    // Chat: plaintext never on the wire, delivered and ACKed.
+    const sent = await alice.sendMessage(bobId, 'hello over the mesh', 60_000)
+    expect(sent.body).toBe('hello over the mesh')
+    await waitFor(() => received.length === 1)
+    expect(received[0]!.body).toBe('hello over the mesh')
+    expect(received[0]!.from).toBe(aliceId)
+
+    // File: 100 KB => 4 chunks of 32 KiB, reassembled and hash-verified on the receiver.
+    const bytes = new Uint8Array(100_000)
+    for (let i = 0; i < bytes.length; i++) bytes[i] = (i * 31 + 7) & 0xff
+    let captured: Blob | null = null
+    const spy = vi.spyOn(URL, 'createObjectURL').mockImplementation((b: Blob | MediaSource) => {
+      captured = b as Blob
+      return 'blob:test-file'
+    })
+    try {
+      const file = { name: 'secret.bin', size: bytes.length, type: 'application/octet-stream', arrayBuffer: async () => bytes.slice().buffer }
+      const out = await alice.sendFile(bobId, file)
+      expect(out.status).toBe('complete')
+      await waitFor(() => files.some((t) => t.status === 'complete'))
+      const done = files.find((t) => t.status === 'complete')!
+      expect(done.name).toBe('secret.bin')
+      expect(done.blobUrl).toBe('blob:test-file')
+      expect(captured).not.toBeNull()
+      const got = new Uint8Array(await captured!.arrayBuffer())
+      expect(got.length).toBe(bytes.length)
+      expect(got.every((b, i) => b === bytes[i])).toBe(true)
+    } finally {
+      spy.mockRestore()
+    }
+
+    await alice.stop()
+    await bob.stop()
+  }, 20_000)
 })
